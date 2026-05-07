@@ -10,11 +10,16 @@ response = requests.get(
     "https://copies-corner-analog-davidson.trycloudflare.com/products"
 )
 response.raise_for_status()
-data = response.json()
+raw = response.json()
 
-if not isinstance(data, list):
-    data = [data]
-
+# ดึง items จาก response
+if isinstance(raw, dict) and "data" in raw:
+    items = raw["data"]
+elif isinstance(raw, list):
+    items = raw
+else:
+    items = [raw]
+    
 # =========================
 # 2) เก็บลง Supabase
 # =========================
@@ -31,37 +36,27 @@ requests.post(
     },
     json={
         "fetched_at": datetime.now().isoformat(),
-        "payload": data
+        "payload": items
     }
 ).raise_for_status()
+
 
 # =========================
 # 3) สรุปข้อมูล
 # =========================
-# ดึงเฉพาะ data list
-if isinstance(data, dict) and "data" in data:
-    items = data["data"]
-else:
-    items = data
-
 detail_lines = []
 
 for idx, item in enumerate(items[:10], start=1):
-
     lines = [f"{idx})"]
-
     if isinstance(item, dict):
         for k, v in item.items():
             lines.append(f"{k}: {v}")
     else:
         lines.append(str(item))
-
     lines.append("--------")
-
     detail_lines.append("\n".join(lines))
 
 details_text = "\n".join(detail_lines)
-
 summary = (
     f"วันที่: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
     f"ข้อมูล {len(items)} รายการ ดังนี้\n\n"
